@@ -59,10 +59,11 @@ poner_en_posicion(Grid, Pos, Block, Grid1) :-
 
 poner_en_posicion_aux([], _, _, _, []).
 poner_en_posicion_aux([_|T], Pos, Block, Pos, [Block|T]).
-poner_en_posicion_aux([H|T], Pos, Block, Index, [H|R]) :-
+poner_en_posicion_aux([H|T], Pos, Block, Index, [H|Resto]) :-
     Index \= Pos,
     Next is Index + 1,
-    poner_en_posicion_aux(T, Pos, Block, Next, R).
+    poner_en_posicion_aux(T, Pos, Block, Next, Resto).
+
 
 resolver_combinaciones(GridInicial, NumCols, PosDisparo, Effects) :-
     buscar_y_combinar(GridInicial, NumCols, PosDisparo, GridPostCombinacionInicial, CombinacionesIniciales),
@@ -182,19 +183,23 @@ aplicar_multiples_combinaciones(GridEntrada, NumCols, [combination(Grupo, PosRes
     poner_en_posicion(GridSinCombinados, PosRes, NuevoVal, GridConUnaCombinacion),
     aplicar_multiples_combinaciones(GridConUnaCombinacion, NumCols, RestoCombinaciones, GridSalida, RestoEffects).
 
+
 eliminar_bloques_combinados(GridEntrada, PosicionesAEliminar, GridSalida) :-
     length(GridEntrada, Len),
     length(GridSalida, Len),
     eliminar_bloques_combinados_aux(GridEntrada, PosicionesAEliminar, 0, GridSalida).
 
 eliminar_bloques_combinados_aux([], _, _, []).
-eliminar_bloques_combinados_aux([H|T], PosicionesAEliminar, Index, [NewH|Resto]) :-
-    (   member(Index, PosicionesAEliminar) ->
-        NewH = 0
-    ;   NewH = H
-    ),
+eliminar_bloques_combinados_aux([_|T], PosicionesAEliminar, Index, ['-'|Resto]) :-
+    member(Index, PosicionesAEliminar), !,
     NextIndex is Index + 1,
     eliminar_bloques_combinados_aux(T, PosicionesAEliminar, NextIndex, Resto).
+eliminar_bloques_combinados_aux([H|T], PosicionesAEliminar, Index, [H|Resto]) :-
+    NextIndex is Index + 1,
+    eliminar_bloques_combinados_aux(T, PosicionesAEliminar, NextIndex, Resto).
+
+
+
 
 aplicar_gravedad(GridEntrada, NumCols, GridSalida) :-
     length(GridEntrada, Len),
@@ -204,6 +209,10 @@ aplicar_gravedad(GridEntrada, NumCols, GridSalida) :-
     maplist(aplicar_gravedad_columna, ColsEntrada, ColsSalida),
     transpose_matrix(ColsSalida, RowsSalida),
     flatten(RowsSalida, GridSalida).
+
+
+
+
 
 list_to_rows([], _, []).
 list_to_rows(List, ChunkSize, [Head|Tail]) :-
@@ -222,6 +231,13 @@ get_first_elements([[H|T]|Rest], [H|Hs], [T|Ts]) :-
     get_first_elements(Rest, Hs, Ts).
 
 aplicar_gravedad_columna(ColumnaEntrada, ColumnaSalida) :-
-    include(=(0), ColumnaEntrada, Vacios),
-    exclude(=(0), ColumnaEntrada, Bloques),
+    include(=('-'), ColumnaEntrada, Vacios),
+    exclude(=('-'), ColumnaEntrada, Bloques),
     append(Bloques, Vacios, ColumnaSalida).
+
+
+normalizar_grid([], []).
+normalizar_grid([H|T], ['-'|R]) :- var(H), !,
+    normalizar_grid(T, R).
+normalizar_grid([H|T], [H|R]) :-
+    normalizar_grid(T, R).
