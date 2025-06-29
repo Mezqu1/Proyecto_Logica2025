@@ -25,6 +25,7 @@ function Game() {
   const [score, setScore] = useState<number>(0);
   const [shootBlock, setShootBlock] = useState<number | null>(null);
   const [waiting, setWaiting] = useState<boolean>(false);
+  const [comboMessage, setComboMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // This is executed just once, after the first render.
@@ -77,7 +78,7 @@ function Game() {
   /**
    * Displays each grid of the sequence as the current grid in 1sec intervals, and considers the other effect information.
    * @param effects The list of effects to be animated.
-   */
+   
   async function animateEffect(effects: EffectTerm[]) {
     const effect = effects[0];    
     const [effectGrid, effectInfo] = effect.args;
@@ -100,27 +101,79 @@ function Game() {
     await delay(1000);
     animateEffect(restRGrids);
   }
+    */
+
+  async function animateEffect(effects: EffectTerm[]) {
+  console.log("Efectos recibidos:", effects);
+
+  // Calcular el total de combinaciones en todos los efectos:
+  const totalCombos = effects.reduce((acc, effect) => {
+    const combos = effect.args[1]; // effectInfoTerm[]
+    return acc + combos.length;
+  }, 0);
+
+  if (totalCombos > 1) {
+    setComboMessage(`Combo x ${totalCombos}`);
+    setTimeout(() => setComboMessage(null), 1500);
+  } else {
+    // Opcional: si solo hay 1 combo, podés mostrar o no el mensaje
+    setComboMessage(null);
+  }
+
+  const effect = effects[0];    
+  const [effectGrid, effectInfo] = effect.args;
+  setGrid(effectGrid);
+
+  effectInfo.forEach((effectInfoItem) => {
+    const { functor, args } = effectInfoItem;
+    if (functor === 'newBlock') {
+      setScore(score => score + args[0]);
+    }
+  });
+
+  const restRGrids = effects.slice(1);
+  if (restRGrids.length === 0) {
+    setWaiting(false);
+    return;
+  }
+
+  await delay(1000);
+  animateEffect(restRGrids);
+}
+
+
 
   if (grid === null) {
     return null;
   }
+  console.log("ComboMessage:", comboMessage);
   return (
-    <div className="game">
-      <div className="header">
-        <div className="score">{score}</div>
+  <div className="game">
+    <div className="header">
+      <div className="score">{score}</div>
+    </div>
+
+    {/* Cartel de Combo */}
+    {comboMessage && (
+      <div className="combo-message">
+        {comboMessage}
       </div>
-      <Board
-        grid={grid}
-        numOfColumns={numOfColumns!}
-        onLaneClick={handleLaneClick}
-      />
-      <div className='footer'>
-        <div className='blockShoot'>
-          <Block value={shootBlock!} position={[0, 0]} />
-        </div>
+    )}
+
+    <Board
+      grid={grid}
+      numOfColumns={numOfColumns!}
+      onLaneClick={handleLaneClick}
+    />
+
+    <div className='footer'>
+      <div className='blockShoot'>
+        <Block value={shootBlock!} position={[0, 0]} />
       </div>
     </div>
-  );
+  </div>
+);
+
 }
 
 export default Game;
