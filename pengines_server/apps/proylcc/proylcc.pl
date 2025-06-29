@@ -6,13 +6,39 @@
 
 :- use_module(library(random)).
 :- use_module(library(clpfd)).
-
+/*
 randomBlock(Grid, Block) :-
     max_in_grid(Grid, Max),
     range_for_max(Max, Rango),
     ( Rango \= [] -> random_member(Block, Rango)
     ; Block = 2
     ).
+*/
+
+:- dynamic bloques_retirados/1.
+bloques_retirados([]).
+
+actualizar_bloques_retirados(NuevosRetirados) :-
+    retractall(bloques_retirados(_)),
+    assertz(bloques_retirados(NuevosRetirados)).
+
+randomBlock(_Grid, Block) :-
+    max_historico(Max),
+    range_for_max(Max, RangoOriginal),
+    bloques_retirados(Retirados),
+    subtract(RangoOriginal, Retirados, RangoFiltrado),
+    ( RangoFiltrado \= [] -> random_member(Block, RangoFiltrado)
+    ; Block = 2
+    ).
+:- dynamic max_historico/1.
+max_historico(64).  % Valor inicial
+
+actualizar_max_historico(NuevoMax) :-
+    max_historico(Anterior),
+    ( NuevoMax > Anterior ->
+        retractall(max_historico(_)),
+        assertz(max_historico(NuevoMax))
+    ; true ).
 
 max_in_grid(Grid, Max) :-
     include(number, Grid, Numeros),
@@ -64,10 +90,49 @@ poner_en_posicion_aux([H|T], Pos, Block, Index, [H|Resto]) :-
     Next is Index + 1,
     poner_en_posicion_aux(T, Pos, Block, Next, Resto).
 
-
+/*
 resolver_combinaciones(GridInicial, NumCols, PosDisparo, Effects) :-
     buscar_y_combinar(GridInicial, NumCols, PosDisparo, GridPostCombinacionInicial, CombinacionesIniciales),
     resolver_combinaciones_recursivo(GridPostCombinacionInicial, NumCols, CombinacionesIniciales, Effects).
+
+resolver_combinaciones(GridInicial, NumCols, PosDisparo, EffectsFinal) :-
+    max_in_grid(GridInicial, MaxAntes),
+    buscar_y_combinar(GridInicial, NumCols, PosDisparo, GridPostCombinacionInicial, CombinacionesIniciales),
+    resolver_combinaciones_recursivo(GridPostCombinacionInicial, NumCols, CombinacionesIniciales, EffectsParciales),
+    last(EffectsParciales, effect(GridFinal, _)),
+    max_in_grid(GridFinal, MaxDespues),
+    (   bloques_retirados(MaxAntes, MaxDespues, Retirados)
+    ->  eliminar_bloques_retirados(GridFinal, Retirados, GridLimpio),
+        append(EffectsParciales, [effect(GridLimpio, [retiredBlocks(Retirados)])], EffectsFinal)
+    ;   EffectsFinal = EffectsParciales
+    ).
+*/
+
+% Declarar un predicado para obtener el bloque máximo anterior (puede guardarse en estado)
+% y compararlo con el nuevo máximo para detectar bloques retirados.
+
+% Suponiendo que guardas el máximo anterior en algún lugar o lo pasas como argumento,
+% o para test simple, calculamos el máximo antes y después:
+
+resolver_combinaciones(GridInicial, NumCols, PosDisparo, Effects) :-
+    max_in_grid(GridInicial, MaxAnt),
+    buscar_y_combinar(GridInicial, NumCols, PosDisparo, GridPostCombinacionInicial, CombinacionesIniciales),
+    resolver_combinaciones_recursivo(GridPostCombinacionInicial, NumCols, CombinacionesIniciales, EffectsSinRetirados),
+    max_in_grid(GridPostCombinacionInicial, MaxNuevo),
+    actualizar_max_historico(MaxNuevo),
+    bloques_retirados(MaxAnt, MaxNuevo, Retirados),
+    bloques_retirados(MaxAnt, MaxNuevo, Retirados),
+   %retirados
+ ( Retirados = [] ->
+    Effects = EffectsSinRetirados
+;
+    last(EffectsSinRetirados, effect(GridFinalAnterior, _)),
+    eliminar_bloques_retirados(GridFinalAnterior, Retirados, GridSinRetirados),
+    aplicar_gravedad(GridSinRetirados, NumCols, GridLimpio),
+    actualizar_bloques_retirados(Retirados),
+    append(EffectsSinRetirados, [effect(GridLimpio, [retiredBlocks(Retirados)])], Effects)
+).
+
 
 resolver_combinaciones_recursivo(GridActual, NumCols, AccCombinaciones, Effects) :-
     aplicar_gravedad(GridActual, NumCols, GridConGravedad),
@@ -198,6 +263,12 @@ eliminar_bloques_combinados_aux([H|T], PosicionesAEliminar, Index, [H|Resto]) :-
     NextIndex is Index + 1,
     eliminar_bloques_combinados_aux(T, PosicionesAEliminar, NextIndex, Resto).
 
+eliminar_bloques_retirados([], _, []).
+eliminar_bloques_retirados([H|T], Retirados, ['-'|Resto]) :-
+    member(H, Retirados), !,
+    eliminar_bloques_retirados(T, Retirados, Resto).
+eliminar_bloques_retirados([H|T], Retirados, [H|Resto]) :-
+    eliminar_bloques_retirados(T, Retirados, Resto).
 
 
 
@@ -241,3 +312,15 @@ normalizar_grid([H|T], ['-'|R]) :- var(H), !,
     normalizar_grid(T, R).
 normalizar_grid([H|T], [H|R]) :-
     normalizar_grid(T, R).
+/*
+bloques_retirados(MaxAnterior, MaxNuevo, Retirados) :-
+    range_for_max(MaxAnterior, RangoAnterior),
+    range_for_max(MaxNuevo, RangoNuevo),
+    subtract(RangoAnterior, RangoNuevo, Retirados),
+    Retirados \= [].
+*/
+% bloques_retirados(MaxAnt, MaxNuevo, ListaRetirados)
+bloques_retirados(MaxAnt, MaxNuevo, Retirados) :-
+    range_for_max(MaxAnt, RangoAnt),
+    range_for_max(MaxNuevo, RangoNuevo),
+    findall(Bloque, (member(Bloque, RangoAnt), \+ member(Bloque, RangoNuevo)), Retirados).

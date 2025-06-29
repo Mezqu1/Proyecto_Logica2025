@@ -26,6 +26,8 @@ function Game() {
   const [shootBlock, setShootBlock] = useState<number | null>(null);
   const [waiting, setWaiting] = useState<boolean>(false);
   const [comboMessage, setComboMessage] = useState<string | null>(null);
+  const [retiredBlocksMessage, setRetiredBlocksMessage] = useState<string | null>(null);
+
 
   useEffect(() => {
     // This is executed just once, after the first render.
@@ -101,7 +103,7 @@ function Game() {
     await delay(1000);
     animateEffect(restRGrids);
   }
-    */
+    
 
   async function animateEffect(effects: EffectTerm[]) {
   console.log("Efectos recibidos:", effects);
@@ -140,6 +142,49 @@ function Game() {
   await delay(1000);
   animateEffect(restRGrids);
 }
+*/
+async function animateEffect(effects: EffectTerm[]) {
+  console.log("Efectos recibidos:", effects);
+
+  if (effects.length > 0) {
+    // Solo la primera efecto (generalmente las combinaciones)
+    const firstEffect = effects[0];
+    const effectInfo = firstEffect.args[1];
+    // Filtramos solo combinaciones
+    const combosCount = effectInfo.filter(info => info.functor === "combination").length;
+
+    if (combosCount > 1) {
+      setComboMessage(`Combo x ${combosCount}`);
+      setTimeout(() => setComboMessage(null), 1500);
+    } else {
+      setComboMessage(null);
+    }
+  }
+
+  // Luego el resto del código sigue igual...
+  for (const effect of effects) {
+    const [effectGrid, effectInfo] = effect.args;
+    setGrid(effectGrid);
+
+    const retiredEffect = effectInfo.find(info => info.functor === "retiredBlocks");
+    if (retiredEffect) {
+      const blocksRetirados = retiredEffect.args[0];
+      setRetiredBlocksMessage(`Bloques retirados: ${blocksRetirados.join(", ")}`);
+      setTimeout(() => setRetiredBlocksMessage(null), 3000);
+    }
+
+    effectInfo.forEach(({functor, args}) => {
+      if (functor === 'newBlock') {
+        setScore(score => score + args[0]);
+      }
+    });
+
+    await delay(1000);
+  }
+
+  setWaiting(false);
+}
+
 
 
 
@@ -157,6 +202,12 @@ function Game() {
     {comboMessage && (
       <div className="combo-message">
         {comboMessage}
+      </div>
+    )}
+    {/* Cartel de Bloques Retirados */}
+    {retiredBlocksMessage && (
+      <div className="retired-blocks-message">
+        {retiredBlocksMessage}
       </div>
     )}
 
