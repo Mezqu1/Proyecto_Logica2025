@@ -89,32 +89,7 @@ poner_en_posicion_aux([H|T], Pos, Block, Index, [H|Resto]) :-
     Index \= Pos,
     Next is Index + 1,
     poner_en_posicion_aux(T, Pos, Block, Next, Resto).
-/*
-resolver_pasos_juego(GridActual, NumCols, PosDisparo, AccEffects, FinalEffects) :-
-    aplicar_gravedad(GridActual, NumCols, GridPostGravedad),
-    
-    (   GridActual =@= GridPostGravedad ->
-        buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
-        (   NuevasCombinaciones = [] ->
-            FinalEffects = AccEffects
-        ;
-            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
-            append(AccEffects, [EffectCombinacion], NextAccEffects),
-            resolver_pasos_juego(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
-        )
-    ;
-        EffectGravedad = effect(GridPostGravedad, [gravedad]),
-        append(AccEffects, [EffectGravedad], AccEffectsConGravedad),
-        buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
-        (   NuevasCombinaciones = [] ->
-            FinalEffects = AccEffectsConGravedad
-        ;
-            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
-            append(AccEffectsConGravedad, [EffectCombinacion], NextAccEffects),
-            resolver_pasos_juego(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
-        )
-    ).
-*/
+
 resolver_pasos_juego(GridActual, NumCols, PosDisparo, AccEffects, FinalEffects) :-
     aplicar_gravedad(GridActual, NumCols, GridPostGravedad),
 
@@ -122,13 +97,17 @@ resolver_pasos_juego(GridActual, NumCols, PosDisparo, AccEffects, FinalEffects) 
         buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
 
         ( NuevasCombinaciones = [] ->
-            % Aquí, limpiamos bloques retirados antes de devolver el resultado
+            % Limpiar bloques retirados y aplicar gravedad luego de la limpieza
             max_in_grid(GridPostCombinaciones, Max),
             range_for_max(Max, Rango),
-            bloques_retirados_en_grilla(GridPostCombinaciones,Rango,Max , BloquesRetirados),
+            bloques_retirados_en_grilla(GridPostCombinaciones, Rango, Max, BloquesRetirados),
             eliminar_bloques_retirados(GridPostCombinaciones, BloquesRetirados, GridLimpia),
             EffectLimpieza = effect(GridLimpia, [limpieza_bloques_retirados(BloquesRetirados)]),
-            append(AccEffects, [EffectLimpieza], FinalEffects)
+
+            aplicar_gravedad(GridLimpia, NumCols, GridFinal),
+            EffectGravedadPostLimpieza = effect(GridFinal, [gravedad]),
+
+            append(AccEffects, [EffectLimpieza, EffectGravedadPostLimpieza], FinalEffects)
         ;
             EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
             append(AccEffects, [EffectCombinacion], NextAccEffects),
@@ -140,13 +119,16 @@ resolver_pasos_juego(GridActual, NumCols, PosDisparo, AccEffects, FinalEffects) 
         buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
 
         ( NuevasCombinaciones = [] ->
-            % Aquí también limpiamos si no hay más combinaciones
             max_in_grid(GridPostCombinaciones, Max),
             range_for_max(Max, Rango),
-            bloques_retirados_en_grilla(GridPostCombinaciones, Rango,Max, BloquesRetirados),
+            bloques_retirados_en_grilla(GridPostCombinaciones, Rango, Max, BloquesRetirados),
             eliminar_bloques_retirados(GridPostCombinaciones, BloquesRetirados, GridLimpia),
             EffectLimpieza = effect(GridLimpia, [limpieza_bloques_retirados(BloquesRetirados)]),
-            append(AccEffectsConGravedad, [EffectLimpieza], FinalEffects)
+
+            aplicar_gravedad(GridLimpia, NumCols, GridFinal),
+            EffectGravedadPostLimpieza = effect(GridFinal, [gravedad]),
+
+            append(AccEffectsConGravedad, [EffectLimpieza, EffectGravedadPostLimpieza], FinalEffects)
         ;
             EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
             append(AccEffectsConGravedad, [EffectCombinacion], NextAccEffects),

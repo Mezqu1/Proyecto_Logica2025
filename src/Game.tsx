@@ -14,18 +14,21 @@ interface EffectTerm extends PrologTerm {
 
 interface DisparoTerm extends PrologTerm { functor: "disparo"; args: [number, number]; }
 interface GravedadTerm extends PrologTerm { functor: "gravedad"; args: []; }
-
-// 'combination' tiene 4 argumentos: [GrupoCombinable, PosRes, NuevoValor, TamanioGrupo]
-interface CombinationTerm extends PrologTerm {
-  functor: "combination";
-  args: [number[], number, number, number]; // NuevoValor es args[2], TamanioGrupo es args[3]
-}
+interface CombinationTerm extends PrologTerm {functor: "combination"; args: [number[], number, number, number]; }
 
 interface NewBlockTerm extends PrologTerm { functor: "newBlock"; args: [number]; }
 
 // Tipo de unión que incluye todos los posibles términos en effectInfo
 type EffectInfoTerm = DisparoTerm | GravedadTerm | CombinationTerm | NewBlockTerm | PrologTerm;
-// -------------------------------------------------------------------------------------
+
+function showTemporaryMessage(
+  setter: React.Dispatch<React.SetStateAction<string | null>>,
+  message: string,
+  duration: number
+) {
+  setter(message);
+  setTimeout(() => setter(null), duration);
+}
 
 function Game() {
   const [pengine, setPengine] = useState<any>(null);
@@ -37,6 +40,8 @@ function Game() {
   const [comboMessage, setComboMessage] = useState<string | null>(null);
   const COMBO_DISPLAY_DURATION = 1500; // Duración del cartel de combo en ms
   const DEFAULT_EFFECT_DELAY = 500; // Retraso entre efectos generales
+  const [removedMessage, setRemovedMessage] = useState<string | null>(null);
+  const REMOVED_DISPLAY_DURATION = 5000; // Duración del aviso de eliminación
 
   useEffect(() => {
     connectToPenginesServer();
@@ -64,38 +69,40 @@ function Game() {
     if (waiting) {
       return;
     }
+
+    // 💡 Ocultar aviso de bloques retirados si existía
+    //setRemovedMessage(null);
+
     const gridS = JSON.stringify(grid).replace(/"/g, '');
     const queryS = `shoot(${shootBlock}, ${lane}, ${gridS}, ${numOfColumns}, Effects), last(Effects, effect(RGrid,_)), randomBlock(RGrid, Block)`;
     setWaiting(true);
     const response = await pengine.query(queryS);    
     if (response) {      
-      // Aquí llamamos a la función que anima la secuencia de efectos
-      animateEffectsRecursive(response['Effects']); // Cambié el nombre a 'animateEffectsRecursive' para evitar confusiones
+      
+      animateEffectsRecursive(response['Effects']); 
       setShootBlock(response['Block']);
     } else {
       setWaiting(false);
     }
   }
   
-  /**
-   * Esta función es la versión recursiva de la animación de efectos,
-   * combinando tu estructura original con la lógica de score y combos.
-   */
+  
 async function animateEffectsRecursive(effects: EffectTerm[]) {
     // Si no hay más efectos, termina la animación y habilita el disparo.
     if (effects.length === 0) {
       setWaiting(false);
-      setComboMessage(null); // Asegura que el mensaje de combo se oculte al finalizar completamente
+      setComboMessage(null); 
       return;
     }
 
     const currentEffect = effects[0];    
     const [effectGrid, effectInfo] = currentEffect.args;
-
+    console.log("EFFECT INFO:", effectInfo);
+   
     // --- Lógica para el score y el combo message para el efecto actual ---
     let scoreUpdateForThisStep = 0;
     let comboCountForThisStep = 0;
-    let anyCombinationOccurred = false; // Bandera para saber si hubo al menos 1 combinación
+    let anyCombinationOccurred = false; 
 
     // Iterar sobre todos los elementos de effectInfo para calcular score y combos.
     for (const item of effectInfo) {
@@ -105,39 +112,83 @@ async function animateEffectsRecursive(effects: EffectTerm[]) {
         
         // Sumar directamente el valor del nuevo bloque generado
         scoreUpdateForThisStep += nuevoValorCombinacion;
-        comboCountForThisStep++; // Contar esta combinación
-        anyCombinationOccurred = true; // Al menos una combinación ocurrió
+        comboCountForThisStep++; 
+        anyCombinationOccurred = true; 
       } 
-      // Puedes agregar aquí la lógica para 'newBlock' si quieres que sume puntos
-      // else if (item.functor === 'newBlock') {
-      //   scoreUpdateForThisStep += (item as NewBlockTerm).args[0];
-      // }
+      
     }
+   
+   // Aviso de bloques eliminados
+    let removedBlocksCount = 0;
+
+    /*/ --- Aviso de bloques eliminados correctamente filtrado ---
+    for (const item of effectInfo) {
+    if (
+      item &&
+      typeof item === 'object' &&
+      'functor' in item &&
+      item.functor === 'limpieza_bloques_retirados' &&
+      Array.isArray(item.args) &&
+      Array.isArray(item.args[0]) &&
+      item.args[0].length > 0 // ✅ Solo si hay bloques retirados
+    ) {
+      const bloques = item.args[0];
+      const textoBloques = bloques.join(', ');
+      setRemovedMessage(`Se eliminaron los bloques retirados: ${textoBloques}`);
+      setTimeout(() => setRemovedMessage(null), REMOVED_DISPLAY_DURATION);
+    }
+    }
+    // Mostrar mensaje si hubo eliminación
+    if (removedBlocksCount > 0) {
+      setRemovedMessage(`Se eliminaron ${removedBlocksCount} bloque${removedBlocksCount > 1 ? 's' : ''}`);
+      setTimeout(() => setRemovedMessage(null), REMOVED_DISPLAY_DURATION);
+      await delay(DEFAULT_EFFECT_DELAY); 
+    }
+*/
+let removedMessageToShow: string | null = null;
+
+for (const item of effectInfo) {
+  if (
+    item?.functor === 'limpieza_bloques_retirados' &&
+    Array.isArray(item.args?.[0]) &&
+    item.args[0].length > 0
+  ) {
+    const bloques = item.args[0];
+    const textoBloques = bloques.join(', ');
+    showTemporaryMessage(setRemovedMessage, `Se eliminaron los bloques retirados: ${textoBloques}`, REMOVED_DISPLAY_DURATION);
+    await delay(1000); // para que el usuario lo vea antes de continuar
+  }
+}
+
+
 
     // Actualizar la grilla y el score
     setGrid(effectGrid); 
     if (scoreUpdateForThisStep > 0) {
       setScore(prevScore => prevScore + scoreUpdateForThisStep);
     }
+   /*
+    for (const item of effectInfo) {
+  if (item && item.functor === 'gravedad') {
+    if (removedMessageToShow) {
+      setRemovedMessage(removedMessageToShow);
+      setTimeout(() => setRemovedMessage(null), REMOVED_DISPLAY_DURATION);
+    }
+  }
+}
+*/
 
     // *** LÓGICA DE COMBO REVISADA ***
-    // Muestra el mensaje de combo basado en si hubo combinaciones y el tamaño del grupo
     if (anyCombinationOccurred) {
-        // Tu lógica previa de "COMBO xN" para grupos de 3 o más era:
-        // if (tamanioGrupo >= 3) { setComboMessage(`COMBO x${tamanioGrupo - 1}`); }
-        // Si tienes varias combinaciones en effectInfo, aquí podrías decidir:
-        // 1. Mostrar un combo por CADA combinación individual (esto sería más complejo, requiriendo múltiples mensajes o un solo mensaje muy rápido)
-        // 2. Mostrar un solo mensaje general si hubo más de una combinación en este 'effect' (como estaba antes)
-        // 3. Mostrar un mensaje para cada combinación si su `tamanioGrupo` es >= 3.
-
+       
         // Opción 1: Combo general si hubo más de una combinación en este effect
         if (comboCountForThisStep > 1) {
             setComboMessage(`COMBO x${comboCountForThisStep}`);
-            // El mensaje se ocultará después de COMBO_DISPLAY_DURATION
+            
             setTimeout(() => setComboMessage(null), COMBO_DISPLAY_DURATION);
         } else if (comboCountForThisStep === 1) {
             // Si solo hubo una combinación, pero es parte de un grupo grande (ej. 4 bloques),
-            // podemos usar el tamanioGrupo del primer combo encontrado (o el único)
+          
             const firstCombination = effectInfo.find(item => item.functor === 'combination') as CombinationTerm;
             if (firstCombination && firstCombination.args[3] >= 3) {
                  setComboMessage(`COMBO x${firstCombination.args[3] - 1}`);
@@ -151,12 +202,11 @@ async function animateEffectsRecursive(effects: EffectTerm[]) {
     } else {
         setComboMessage(null); // Si no hubo ninguna combinación en este efecto, asegúrate de que no haya mensaje de combo
     }
-    // --- Fin Lógica de Combo Revisada ---
-
-    // Esperar antes de animar el siguiente efecto en la secuencia
+    
+    
     await delay(DEFAULT_EFFECT_DELAY); 
 
-    // Llamada recursiva para el resto de los efectos
+    
     const restEffects = effects.slice(1);
     animateEffectsRecursive(restEffects);
   }
@@ -178,7 +228,11 @@ async function animateEffectsRecursive(effects: EffectTerm[]) {
         {comboMessage}
       </div>
     )}
-
+      {removedMessage && (
+      <div className="removed-message">
+        {removedMessage}
+      </div>
+    )}
     <Board
       grid={grid}
       numOfColumns={numOfColumns!}
