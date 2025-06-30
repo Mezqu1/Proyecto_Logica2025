@@ -42,6 +42,8 @@ function Game() {
   const DEFAULT_EFFECT_DELAY = 500; // Retraso entre efectos generales
   const [removedMessage, setRemovedMessage] = useState<string | null>(null);
   const REMOVED_DISPLAY_DURATION = 5000; // Duración del aviso de eliminación
+  const [maxBlockMessage, setMaxBlockMessage] = useState<string | null>(null);
+  const MAX_BLOCK_DISPLAY_DURATION = 3000; // 3 segundos
 
   useEffect(() => {
     connectToPenginesServer();
@@ -159,7 +161,16 @@ for (const item of effectInfo) {
     await delay(1000); // para que el usuario lo vea antes de continuar
   }
 }
+const previousMax = Math.max(...(grid!.filter(x => typeof x === "number") as number[]));
+const currentMax = Math.max(...(effectGrid.filter(x => typeof x === "number") as number[]));
 
+if (currentMax > previousMax) {
+  showTemporaryMessage(
+    setMaxBlockMessage,
+    `¡Nuevo máximo alcanzado: ${currentMax}!`,
+    MAX_BLOCK_DISPLAY_DURATION
+  );
+}
 
 
     // Actualizar la grilla y el score
@@ -232,6 +243,9 @@ for (const item of effectInfo) {
       <div className="removed-message">
         {removedMessage}
       </div>
+    )}
+    {maxBlockMessage && (
+      <div className="max-block-message">{maxBlockMessage}</div>
     )}
     <Board
       grid={grid}
