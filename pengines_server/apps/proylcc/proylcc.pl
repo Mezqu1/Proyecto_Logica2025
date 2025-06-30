@@ -14,26 +14,50 @@ randomBlock(Grid, Block) :-
     ( Rango \= [] -> random_member(Block, Rango)
     ; Block = 2
     ).
+aplicar_gravedad(GridEntrada, NumCols, GridSalida) :-
+    length(GridEntrada, Len),
+    _NumFilas is Len // NumCols,
+    list_to_rows(GridEntrada, NumCols, RowsEntrada),
+    transpose_matrix(RowsEntrada, ColsEntrada),
+    maplist(aplicar_gravedad_columna, ColsEntrada, ColsSalida),
+    transpose_matrix(ColsSalida, RowsSalida),
+    flatten(RowsSalida, GridSalida).
+
+aplicar_gravedad_columna(ColumnaEntrada, ColumnaSalida) :-
+    include(=('-'), ColumnaEntrada, Vacios),
+    exclude(=('-'), ColumnaEntrada, Bloques),
+    append(Bloques, Vacios, ColumnaSalida).
+
 
 max_in_grid(Grid, Max) :-
     include(number, Grid, Numeros),
     ( Numeros == [] -> Max = 0 ; max_list(Numeros, Max) ).
 
 range_for_max(Max, Rango) :-
-    ( Max =< 8    -> Rango = [2,4,8]
-    ; Max =< 16   -> Rango = [2,4,8,16]
-    ; Max =< 32   -> Rango = [2,4,8,16,32]
-    ; Max =< 64   -> Rango = [2,4,8,16,32,64]
-    ; Max =< 512  -> Rango = [2,4,8,16,32,64,128,256,512]
-    ; Max =< 1024 -> Rango = [4,8,16,32,64,128,256,512,1024]
-    ; Max =< 2048 -> Rango = [8,16,32,64,128,256,512,1024,2048]
-    ; Max =< 8192 -> Rango = [16,32,64,128,256,512,1024,2048,4096,8192]
-    ; Max =< 16384-> Rango = [32,64,128,256,512,1024,2048,4096,8192,16384]
-    ; Rango = [2,4,8]
+    ( Max =< 8    -> Rango = [2,4]
+    ; Max =< 16   -> Rango = [2,4,8]
+    ; Max =< 32   -> Rango = [2,4,8,16]
+    ; Max =< 64   -> Rango = [2,4,8,16,32]
+    ; Max =< 512  -> Rango = [2,4,8,16,32,64]
+    ; Max =< 1024 -> Rango = [4,8,16,32,64,128]
+    ; Max =< 2048 -> Rango = [8,16,32,64,128,256]
+    ; Max =< 8192 -> Rango = [16,32,64,128,256,512]
+    ; Max =< 16384-> Rango = [32,64,128,256,512,1024]
+    ; Rango = [32,64,128,256,512,1024]
     ).
+% bloque_a_retirar(+Max, -BloqueRetirado)
+bloques_a_retirar_acumulados(Max, BloquesRetirados) :-
+    ( Max >= 16000 -> BloquesRetirados = [16, 8, 4, 2]
+    ; Max >= 4096  -> BloquesRetirados = [8, 4, 2]
+    ; Max >= 2048  -> BloquesRetirados = [4, 2]
+    ; Max >= 1024  -> BloquesRetirados = [2]
+    ; BloquesRetirados = []
+    ).
+
 
 shoot(Block, Col, Grid, NumCols, Effects) :-
-    encontrar_posicion_vacia(Grid, Col, NumCols, PosDisparo),
+    %normalizar_grid(GridEntrada, Grid),
+    encontrar_posicion_vacia(Grid, Col, NumCols, PosDisparo),
     poner_en_posicion(Grid, PosDisparo, Block, GridConBloqueDisparado),
     EffectDisparo = effect(GridConBloqueDisparado, [disparo(PosDisparo, Block)]),
     resolver_pasos_juego(GridConBloqueDisparado, NumCols, PosDisparo, [EffectDisparo], Effects).
@@ -65,7 +89,7 @@ poner_en_posicion_aux([H|T], Pos, Block, Index, [H|Resto]) :-
     Index \= Pos,
     Next is Index + 1,
     poner_en_posicion_aux(T, Pos, Block, Next, Resto).
-
+/*
 resolver_pasos_juego(GridActual, NumCols, PosDisparo, AccEffects, FinalEffects) :-
     aplicar_gravedad(GridActual, NumCols, GridPostGravedad),
     
@@ -90,6 +114,49 @@ resolver_pasos_juego(GridActual, NumCols, PosDisparo, AccEffects, FinalEffects) 
             resolver_pasos_juego(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
         )
     ).
+*/
+resolver_pasos_juego(GridActual, NumCols, PosDisparo, AccEffects, FinalEffects) :-
+    aplicar_gravedad(GridActual, NumCols, GridPostGravedad),
+
+    (   GridActual =@= GridPostGravedad ->
+        buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
+
+        ( NuevasCombinaciones = [] ->
+            % Aquí, limpiamos bloques retirados antes de devolver el resultado
+            max_in_grid(GridPostCombinaciones, Max),
+            range_for_max(Max, Rango),
+            bloques_retirados_en_grilla(GridPostCombinaciones,Rango,Max , BloquesRetirados),
+            eliminar_bloques_retirados(GridPostCombinaciones, BloquesRetirados, GridLimpia),
+            EffectLimpieza = effect(GridLimpia, [limpieza_bloques_retirados(BloquesRetirados)]),
+            append(AccEffects, [EffectLimpieza], FinalEffects)
+        ;
+            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
+            append(AccEffects, [EffectCombinacion], NextAccEffects),
+            resolver_pasos_juego(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
+        )
+    ;
+        EffectGravedad = effect(GridPostGravedad, [gravedad]),
+        append(AccEffects, [EffectGravedad], AccEffectsConGravedad),
+        buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
+
+        ( NuevasCombinaciones = [] ->
+            % Aquí también limpiamos si no hay más combinaciones
+            max_in_grid(GridPostCombinaciones, Max),
+            range_for_max(Max, Rango),
+            bloques_retirados_en_grilla(GridPostCombinaciones, Rango,Max, BloquesRetirados),
+            eliminar_bloques_retirados(GridPostCombinaciones, BloquesRetirados, GridLimpia),
+            EffectLimpieza = effect(GridLimpia, [limpieza_bloques_retirados(BloquesRetirados)]),
+            append(AccEffectsConGravedad, [EffectLimpieza], FinalEffects)
+        ;
+            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
+            append(AccEffectsConGravedad, [EffectCombinacion], NextAccEffects),
+            resolver_pasos_juego(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
+        )
+    ).
+
+
+
+
 
 encontrar_grupo_conectado(Grid, NumCols, PosInicio, ValorBuscado, Grupo, VisitadosFinal) :-
     encontrar_grupo_conectado_recursivo(Grid, NumCols, [PosInicio], ValorBuscado, [PosInicio], Grupo, VisitadosFinal).
@@ -199,15 +266,6 @@ eliminar_bloques_combinados_aux([H|T], PosicionesAEliminar, Index, [H|Resto]) :-
     NextIndex is Index + 1,
     eliminar_bloques_combinados_aux(T, PosicionesAEliminar, NextIndex, Resto).
 
-aplicar_gravedad(GridEntrada, NumCols, GridSalida) :-
-    length(GridEntrada, Len),
-    _NumFilas is Len // NumCols,
-    list_to_rows(GridEntrada, NumCols, RowsEntrada),
-    transpose_matrix(RowsEntrada, ColsEntrada),
-    maplist(aplicar_gravedad_columna, ColsEntrada, ColsSalida),
-    transpose_matrix(ColsSalida, RowsSalida),
-    flatten(RowsSalida, GridSalida).
-
 list_to_rows([], _, []).
 list_to_rows(List, ChunkSize, [Head|Tail]) :-
     length(Head, ChunkSize),
@@ -224,13 +282,30 @@ get_first_elements([], [], []).
 get_first_elements([[H|T]|Rest], [H|Hs], [T|Ts]) :-
     get_first_elements(Rest, Hs, Ts).
 
-aplicar_gravedad_columna(ColumnaEntrada, ColumnaSalida) :-
-    include(=('-'), ColumnaEntrada, Vacios),
-    exclude(=('-'), ColumnaEntrada, Bloques),
-    append(Bloques, Vacios, ColumnaSalida).
 
 normalizar_grid([], []).
 normalizar_grid([H|T], ['-'|R]) :- var(H), !,
     normalizar_grid(T, R).
 normalizar_grid([H|T], [H|R]) :-
     normalizar_grid(T, R).
+
+memberchk_in(List, Elem) :- memberchk(Elem, List).
+
+bloques_retirados_en_grilla(Grid, _RangoActual, Max, BloquesRetirados) :-
+    bloques_a_retirar_acumulados(Max, BloquesRetiradosCandidatos),
+    include(number, Grid, NumerosEnGrilla),
+    sort(NumerosEnGrilla, BloquesEnGrillaUnicos),
+    include({BloquesEnGrillaUnicos}/[X]>>memberchk(X, BloquesEnGrillaUnicos), BloquesRetiradosCandidatos, BloquesRetirados).
+
+
+
+protege_max_y_rango(Rango, Max, Elem) :-
+    memberchk(Elem, Rango);
+    Elem =:= Max.
+eliminar_bloques_retirados(Grid, BloquesRetirados, GridLimpia) :-
+    maplist(reemplazar_si_retirado(BloquesRetirados), Grid, GridLimpia).
+
+reemplazar_si_retirado(BloquesRetirados, Valor, NuevoValor) :-
+    ( number(Valor), memberchk(Valor, BloquesRetirados) -> NuevoValor = '-'
+    ; NuevoValor = Valor
+    ).
