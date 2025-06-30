@@ -268,26 +268,12 @@ function Game() {
   if (grid === null) {
     return null;
   }
-  // console.log("ComboMessage:", comboMessage); // Solo para depuración
+  // console.log("Co☺mboMessage:", comboMessage); // Solo para depuración
 
   return (
     <div className="game">
       <div className="header">
-        <div className="score">Score: {score}</div>
-        {/* Botón del Booster y su información */}
-        <button
-          onClick={activateBooster}
-          className="booster-button"
-          // Puedes deshabilitar el botón si no hay pengine o grid
-          disabled={!pengine || !grid} 
-        >
-          Activar Booster
-        </button>
-        {isBoosterActive && (
-          <div className="booster-info">
-            Tiempo restante: {boosterTimeRemaining}s
-          </div>
-        )}
+        <div className="score">{score}</div>
       </div>
 
       {/* Cartel de Combo */}
@@ -304,8 +290,23 @@ function Game() {
       />
 
       <div className='footer'>
+        {/* Botón del Booster y su información - Movido al footer */}
+        <div className="booster-controls">
+            <button
+            onClick={activateBooster}
+            className="booster-button"
+            disabled={!pengine || !grid} 
+            >
+            Booster bloque siguiente
+            </button>
+            {isBoosterActive && (
+            <div className="booster-info">
+                Tiempo restante: {boosterTimeRemaining}s
+            </div>
+            )}
+        </div>
+
         <div className='blockShoot'>
-          {/* Aquí se muestra el bloque actual a disparar */}
           <Block value={shootBlock!} position={[0, 0]} />
         </div>
         {/* Mostrar el siguiente bloque del booster si está activo y hay un bloque siguiente */}
