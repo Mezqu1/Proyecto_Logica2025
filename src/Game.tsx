@@ -44,6 +44,9 @@ function Game() {
   const REMOVED_DISPLAY_DURATION = 5000; // Duración del aviso de eliminación
   const [maxBlockMessage, setMaxBlockMessage] = useState<string | null>(null);
   const MAX_BLOCK_DISPLAY_DURATION = 3000; // 3 segundos
+  const [newBlockRangeMessage, setNewBlockRangeMessage] = useState<string | null>(null);
+  const NEW_BLOCK_RANGE_DISPLAY_DURATION = 4000; // o el tiempo que quieras
+
 
   useEffect(() => {
     connectToPenginesServer();
@@ -87,7 +90,12 @@ function Game() {
       setWaiting(false);
     }
   }
-  
+  async function getRangeForMax(max: number): Promise<number[]> {
+  const query = `range_for_max(${max}, Rango)`;
+  const response = await pengine.query(query);
+  return response["Rango"];
+}
+
   
 async function animateEffectsRecursive(effects: EffectTerm[]) {
     // Si no hay más efectos, termina la animación y habilita el disparo.
@@ -170,7 +178,21 @@ if (currentMax > previousMax) {
     `¡Nuevo máximo alcanzado: ${currentMax}!`,
     MAX_BLOCK_DISPLAY_DURATION
   );
+
+  // Obtener y comparar rangos
+  const prevRange = await getRangeForMax(previousMax);
+  const newRange = await getRangeForMax(currentMax);
+  const nuevosBloques = newRange.filter(b => !prevRange.includes(b));
+
+  if (nuevosBloques.length > 0) {
+    showTemporaryMessage(
+      setNewBlockRangeMessage,
+      `¡Nuevo rango desbloqueado! Ahora puedes disparar: ${newRange.join(', ')}`,
+      NEW_BLOCK_RANGE_DISPLAY_DURATION
+    );
+  }
 }
+
 
 
     // Actualizar la grilla y el score

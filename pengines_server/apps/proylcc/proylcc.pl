@@ -291,3 +291,6 @@ reemplazar_si_retirado(BloquesRetirados, Valor, NuevoValor) :-
     ( number(Valor), memberchk(Valor, BloquesRetirados) -> NuevoValor = '-'
     ; NuevoValor = Valor
     ).
+
+rango_valido(Max, Rango) :-
+    range_for_max(Max, Rango).

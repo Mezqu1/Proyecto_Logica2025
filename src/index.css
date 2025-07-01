@@ -99,23 +99,7 @@ body {
   90%  { opacity: 1; transform: translateX(-50%) scale(1); }
   100% { opacity: 0; transform: translateX(-50%) scale(0.9); }
 }
-/*
-.removed-message {
-  position: absolute;
-  top: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #ff5555;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  animation: fadeOut 1s ease-in-out forwards;
-  z-index: 10;
-}
-*/
+
 .removed-message {
   position: fixed;
   top: 45%;
@@ -137,28 +121,13 @@ body {
   70% { opacity: 1; }
   100% { opacity: 0; }
 }
-/*
-.max-block-message {
-  background-color: #4caf50;
-  color: white;
-  font-size: 1.5rem;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  font-weight: bold;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  animation: fadeInOut 3s ease-in-out;
-  position: fixed; /* o absolute si está dentro de un contenedor 
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-}
-*/
+
 .max-block-message {
   position: fixed;
   top: 55%; /* un poco más abajo que removed-message */
   left: 50%;
   transform: translateX(-50%);
+  z-index: 1000;
   background-color: #4caf50;
   color: white;
   font-size: 1.5rem;
@@ -167,5 +136,15 @@ body {
   font-weight: bold;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   animation: fadeInOut 3s ease-in-out;
-  z-index: 1000;
+  
 }
+.new-block-range-message {
+  color: #fff;
+  background-color: #007bff;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 10px;
+  animation: fadeInOut 4s ease;
+}
+
+
