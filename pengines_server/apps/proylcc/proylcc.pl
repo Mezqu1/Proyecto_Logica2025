@@ -2,7 +2,7 @@
     [
         randomBlock/2,
         shoot/5,
-        get_hint/6
+        get_hint/6  
     ]).
 
 :- use_module(library(random)).
