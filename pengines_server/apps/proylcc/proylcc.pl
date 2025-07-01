@@ -1,7 +1,8 @@
 ﻿:- module(proylcc,
     [
         randomBlock/2,
-        shoot/5
+        shoot/5,
+        get_hint/6
     ]).
 
 :- use_module(library(random)).
@@ -234,3 +235,70 @@ normalizar_grid([H|T], ['-'|R]) :- var(H), !,
     normalizar_grid(T, R).
 normalizar_grid([H|T], [H|R]) :-
     normalizar_grid(T, R).
+
+get_hint(Block, Grid, NumCols, Columna, HintEffects, FinalGrid) :-
+    between(1, NumCols, Columna), % Itera sobre cada columna
+    (   encontrar_posicion_vacia(Grid, Columna, NumCols, PosDisparo) ->
+        poner_en_posicion(Grid, PosDisparo, Block, GridConBloqueDisparado),
+        resolver_pasos_juego_hint(GridConBloqueDisparado, NumCols, PosDisparo, [], HintEffects),
+        (   HintEffects = [] -> FinalGrid = GridConBloqueDisparado
+        ;   last(HintEffects, effect(FinalGrid, _))
+        )
+    ;   
+        HintEffects = [effect(Grid, [columna_llena])], 
+        FinalGrid = Grid
+    ).
+
+resolver_pasos_juego_hint(GridActual, NumCols, PosDisparo, AccEffects, FinalEffects) :-
+    aplicar_gravedad(GridActual, NumCols, GridPostGravedad),
+    (   GridActual =@= GridPostGravedad ->
+        buscar_todas_las_combinaciones_hint(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
+        (   NuevasCombinaciones = [] ->
+            FinalEffects = AccEffects
+        ;
+            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
+            append(AccEffects, [EffectCombinacion], NextAccEffects),
+            resolver_pasos_juego_hint(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
+        )
+    ;
+        EffectGravedad = effect(GridPostGravedad, [gravedad]),
+        append(AccEffects, [EffectGravedad], AccEffectsConGravedad),
+        buscar_todas_las_combinaciones_hint(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
+        (   NuevasCombinaciones = [] ->
+            FinalEffects = AccEffectsConGravedad
+        ;
+            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
+            append(AccEffectsConGravedad, [EffectCombinacion], NextAccEffects),
+            resolver_pasos_juego_hint(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
+        )
+    ).
+
+
+buscar_todas_las_combinaciones_hint(GridEntrada, NumCols, PosDisparo, GridSalida, Combinaciones) :-
+    length(GridEntrada, Len),
+    MaxIndex is Len - 1,
+    findall(
+        combination(GrupoCombinable, PosResultado, NuevoValor, LenGrupo),
+        (   between(0, MaxIndex, Pos),
+            nth0(Pos, GridEntrada, Valor),
+            number(Valor),
+            Valor \= 0,
+            encontrar_grupo_conectado(GridEntrada, NumCols, Pos, Valor, GrupoCombinable, _),
+            length(GrupoCombinable, LenGrupo),
+            LenGrupo >= 2,
+            min_list(GrupoCombinable, Pos),
+            calcular_nuevo_valor_multiplicado(Valor, LenGrupo, NuevoValor),
+            (   member(PosDisparo, GrupoCombinable) ->
+                FilaDisparo is PosDisparo // NumCols,
+                (   forall(member(P_grupo, GrupoCombinable), (P_grupo // NumCols) =:= FilaDisparo) ->
+                    PosResultado = PosDisparo
+                ;
+                    min_list(GrupoCombinable, PosResultado)
+                )
+            ;
+                min_list(GrupoCombinable, PosResultado)
+            )
+        ),
+        TodasLasCombinacionesSinDuplicados
+    ),
+    aplicar_multiples_combinaciones(GridEntrada, NumCols, TodasLasCombinacionesSinDuplicados, GridSalida, Combinaciones).
