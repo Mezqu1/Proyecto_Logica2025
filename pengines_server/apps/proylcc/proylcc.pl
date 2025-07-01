@@ -16,14 +16,6 @@ randomBlock(Grid, Block) :-
     ; Block = 2
     ).
 
-aplicar_gravedad(GridEntrada, NumCols, GridSalida) :-
-    length(GridEntrada, Len),
-    _NumFilas is Len // NumCols,
-    list_to_rows(GridEntrada, NumCols, RowsEntrada),
-    transpose_matrix(RowsEntrada, ColsEntrada),
-    maplist(aplicar_gravedad_columna, ColsEntrada, ColsSalida),
-    transpose_matrix(ColsSalida, RowsSalida),
-    flatten(RowsSalida, GridSalida).
 
 aplicar_gravedad_columna(ColumnaEntrada, ColumnaSalida) :-
     include(=('-'), ColumnaEntrada, Vacios),
@@ -58,7 +50,6 @@ bloques_a_retirar_acumulados(Max, BloquesRetirados) :-
 
 
 shoot(Block, Col, Grid, NumCols, Effects) :-
-    %normalizar_grid(GridEntrada, Grid),
     encontrar_posicion_vacia(Grid, Col, NumCols, PosDisparo),
     poner_en_posicion(Grid, PosDisparo, Block, GridConBloqueDisparado),
     EffectDisparo = effect(GridConBloqueDisparado, [disparo(PosDisparo, Block)]),
@@ -96,10 +87,8 @@ poner_en_posicion_aux([H|T], Pos, Block, Index, [H|Resto]) :-
 resolver_pasos_juego(GridActual, NumCols, PosDisparo, AccEffects, FinalEffects) :-
     aplicar_gravedad(GridActual, NumCols, GridPostGravedad),
     (   GridActual =@= GridPostGravedad ->
-        buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
-
+        buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),  
         ( NuevasCombinaciones = [] ->
-            % Limpiar bloques retirados y aplicar gravedad luego de la limpieza
             max_in_grid(GridPostCombinaciones, Max),
             range_for_max(Max, Rango),
             bloques_retirados_en_grilla(GridPostCombinaciones, Rango, Max, BloquesRetirados),
