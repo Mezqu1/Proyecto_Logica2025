@@ -60,9 +60,11 @@ body {
 .footer {
   align-self: stretch;
   display: flex;
-  justify-content: center;
   border-top: 1px solid lightgray;
   padding: 5px;
+  gap: 20px; /* Asegura un espacio entre los grupos de controles */
+  justify-content: space-around; /* O space-between, o center, dependiendo de cómo quieras distribuirlos */
+  align-items: flex-start;
 }
 
 .blockShoot {
@@ -74,9 +76,10 @@ body {
   padding: 5px;
 }
 
-.blockShoot>div {
+.blockShoot > div {
   flex-grow: 1;
 }
+
 .combo-message {
   position: absolute;
   top: 80px;
@@ -88,18 +91,98 @@ body {
   font-weight: bold;
   padding: 10px 20px;
   border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   z-index: 999;
   animation: fadeInOut 1.5s ease-in-out;
 }
 
+.booster-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Alinea el botón y el tiempo a la izquierda dentro de su contenedor */
+  gap: 5px;
+}
+
+
+.booster-button {
+  background-color: #4CAF50; /* Un verde amigable */
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.booster-button:hover {
+  background-color: #45a049;
+  transform: translateY(-2px);
+}
+
+.booster-button:active {
+  background-color: #3e8e41;
+  transform: translateY(0);
+}
+
+.booster-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.booster-info {
+  margin-top: 5px; /* Ajustado el margen superior */
+  padding: 8px 12px;
+  background-color: #f0ad4e; /* Un naranja para resaltar */
+  color: white;
+  border-radius: 8px;
+  font-weight: bold;
+  animation: fadeIn 0.5s ease-out; /* Esta animación la traemos de tu compañero */
+}
+
+.next-block-display {
+  margin-left: 20px; /* Separación entre el bloque actual y el siguiente */
+  width: 70px;
+  height: 70px;
+  display: flex;
+  border-radius: 10px;
+  border: 1px dashed #777; /* Un borde diferente para diferenciarlo */
+  padding: 5px;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.hint-overlay {
+  position: absolute;
+  top: 50%; /* Centrado vertical */
+  left: 50%; /* Centrado horizontal */
+  transform: translate(-50%, -50%); /* Ajuste para centrarlo realmente */
+  background-color: rgba(0, 0, 0, 0.7); /* Fondo semi-transparente */
+  color: white;
+  padding: 5px 8px; /* Un poco menos de padding */
+  border-radius: 5px;
+  font-size: 13px; /* Tamaño de fuente un poco más pequeño */
+  font-weight: bold;
+  text-align: center;
+  pointer-events: none; /* Asegura que el clic en la columna pase a través del hint */
+  z-index: 1000; /* Asegura que esté por encima de los bloques */
+  min-width: 80%; /* Asegura que el texto no se salga del carril */
+  box-sizing: border-box; /* Incluye padding en el ancho */
+  white-space: nowrap; /* Evita que el texto se rompa en varias líneas */
+  opacity: 0.9; /* Ligeramente más opaco */
+}
+
 @keyframes fadeInOut {
-  0%   { opacity: 0; transform: translateX(-50%) scale(0.9); }
-  10%  { opacity: 1; transform: translateX(-50%) scale(1.1); }
-  90%  { opacity: 1; transform: translateX(-50%) scale(1); }
+  0% { opacity: 0; transform: translateX(-50%) scale(0.9); }
+  10% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+  90% { opacity: 1; transform: translateX(-50%) scale(1); }
   100% { opacity: 0; transform: translateX(-50%) scale(0.9); }
 }
 
+/* ANIMACIONES Y MENSAJES DE TU RAMA */
 .removed-message {
   position: fixed;
   top: 45%;
@@ -135,16 +218,25 @@ body {
   border-radius: 12px;
   font-weight: bold;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  animation: fadeInOut 3s ease-in-out;
-  
+  animation: fadeInOut 3s ease-in-out; /* Reutiliza fadeInOut que ya está definida */
 }
+
 .new-block-range-message {
+  position: fixed; /* Aseguramos que se superponga */
+  top: 65%; /* Ajusta la posición para que no se superponga con otros mensajes */
+  left: 50%;
+  transform: translateX(-50%);
   color: #fff;
   background-color: #007bff;
   padding: 10px;
   margin-top: 10px;
   border-radius: 10px;
-  animation: fadeInOut 4s ease;
+  animation: fadeInOut 4s ease; /* Reutiliza fadeInOut */
+  z-index: 1000; /* Aseguramos que esté sobre el tablero */
 }
 
-
+/* ANIMACIÓN NECESARIA PARA BOOSTER-INFO DE TU COMPAÑERO */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

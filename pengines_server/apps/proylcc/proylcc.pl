@@ -1,7 +1,8 @@
 ﻿:- module(proylcc,
-    [
-        randomBlock/2,
-        shoot/5
+    [
+        randomBlock/2,
+        shoot/5,
+        get_hint/6   % <--- Mantener esta línea para exportar el hint
     ]).
 
 :- use_module(library(random)).
@@ -14,6 +15,8 @@ randomBlock(Grid, Block) :-
     ( Rango \= [] -> random_member(Block, Rango)
     ; Block = 2
     ).
+
+% Estas funciones de gravedad deben estar solo UNA VEZ y preferiblemente aquí arriba
 aplicar_gravedad(GridEntrada, NumCols, GridSalida) :-
     length(GridEntrada, Len),
     _NumFilas is Len // NumCols,
@@ -28,12 +31,12 @@ aplicar_gravedad_columna(ColumnaEntrada, ColumnaSalida) :-
     exclude(=('-'), ColumnaEntrada, Bloques),
     append(Bloques, Vacios, ColumnaSalida).
 
-
 max_in_grid(Grid, Max) :-
     include(number, Grid, Numeros),
     ( Numeros == [] -> Max = 0 ; max_list(Numeros, Max) ).
 
 range_for_max(Max, Rango) :-
+    % >>> RESOLVIENDO CONFLICTO EN range_for_max/2: Manteniendo tu versión (HEAD)
     ( Max =< 8    -> Rango = [2,4]
     ; Max =< 16   -> Rango = [2,4,8]
     ; Max =< 32   -> Rango = [2,4,8,16]
@@ -41,23 +44,23 @@ range_for_max(Max, Rango) :-
     ; Max =< 512  -> Rango = [2,4,8,16,32,64]
     ; Max =< 1024 -> Rango = [4,8,16,32,64,128]
     ; Max =< 2048 -> Rango = [8,16,32,64,128,256]
-    ; Max =< 8192 -> Rango = [16,32,64,128,256,512]
+    ; Max =< 8192 -> Rango = [16,32,64,128,256,512]
     ; Max =< 16384-> Rango = [32,64,128,256,512,1024]
     ; Rango = [32,64,128,256,512,1024]
     ).
-% bloque_a_retirar(+Max, -BloqueRetirado)
-bloques_a_retirar_acumulados(Max, BloquesRetirados) :-
-    ( Max >= 16000 -> BloquesRetirados = [16, 8, 4, 2]
-    ; Max >= 4096  -> BloquesRetirados = [8, 4, 2]
-    ; Max >= 2048  -> BloquesRetirados = [4, 2]
-    ; Max >= 1024  -> BloquesRetirados = [2]
-    ; BloquesRetirados = []
-    ).
 
+% Predicados para la funcionalidad de 'bloques_a_retirar' (solo en tu rama)
+bloques_a_retirar_acumulados(Max, BloquesRetirados) :-
+    ( Max >= 16000 -> BloquesRetirados = [16, 8, 4, 2]
+    ; Max >= 4096  -> BloquesRetirados = [8, 4, 2]
+    ; Max >= 2048  -> BloquesRetirados = [4, 2]
+    ; Max >= 1024  -> BloquesRetirados = [2]
+    ; BloquesRetirados = []
+    ).
 
 shoot(Block, Col, Grid, NumCols, Effects) :-
-    %normalizar_grid(GridEntrada, Grid),
-    encontrar_posicion_vacia(Grid, Col, NumCols, PosDisparo),
+    %normalizar_grid(GridEntrada, Grid), % <--- Mantener línea comentada si la quieres
+    encontrar_posicion_vacia(Grid, Col, NumCols, PosDisparo),
     poner_en_posicion(Grid, PosDisparo, Block, GridConBloqueDisparado),
     EffectDisparo = effect(GridConBloqueDisparado, [disparo(PosDisparo, Block)]),
     resolver_pasos_juego(GridConBloqueDisparado, NumCols, PosDisparo, [EffectDisparo], Effects).
@@ -91,54 +94,49 @@ poner_en_posicion_aux([H|T], Pos, Block, Index, [H|Resto]) :-
     poner_en_posicion_aux(T, Pos, Block, Next, Resto).
 
 resolver_pasos_juego(GridActual, NumCols, PosDisparo, AccEffects, FinalEffects) :-
-    aplicar_gravedad(GridActual, NumCols, GridPostGravedad),
+    aplicar_gravedad(GridActual, NumCols, GridPostGravedad),
+    % >>> RESOLVIENDO CONFLICTO EN resolver_pasos_juego/5
+    (   GridActual =@= GridPostGravedad ->
+        buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
 
-    (   GridActual =@= GridPostGravedad ->
-        buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
+        ( NuevasCombinaciones = [] ->
+            % Lógica de tu rama: Limpiar bloques retirados y aplicar gravedad luego de la limpieza
+            max_in_grid(GridPostCombinaciones, Max),
+            bloques_a_retirar_acumulados(Max, BloquesRetirados), % Usar tu nuevo predicado
+            eliminar_bloques_retirados(GridPostCombinaciones, BloquesRetirados, GridLimpia), % Usar tu nuevo predicado
+            EffectLimpieza = effect(GridLimpia, [limpieza_bloques_retirados(BloquesRetirados)]),
 
-        ( NuevasCombinaciones = [] ->
-            % Limpiar bloques retirados y aplicar gravedad luego de la limpieza
-            max_in_grid(GridPostCombinaciones, Max),
-            range_for_max(Max, Rango),
-            bloques_retirados_en_grilla(GridPostCombinaciones, Rango, Max, BloquesRetirados),
-            eliminar_bloques_retirados(GridPostCombinaciones, BloquesRetirados, GridLimpia),
-            EffectLimpieza = effect(GridLimpia, [limpieza_bloques_retirados(BloquesRetirados)]),
+            aplicar_gravedad(GridLimpia, NumCols, GridFinal),
+            EffectGravedadPostLimpieza = effect(GridFinal, [gravedad]),
 
-            aplicar_gravedad(GridLimpia, NumCols, GridFinal),
-            EffectGravedadPostLimpieza = effect(GridFinal, [gravedad]),
+            append(AccEffects, [EffectLimpieza, EffectGravedadPostLimpieza], FinalEffects)
+        ;
+            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
+            append(AccEffects, [EffectCombinacion], NextAccEffects),
+            resolver_pasos_juego(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
+        )
+    ;
+        EffectGravedad = effect(GridPostGravedad, [gravedad]),
+        append(AccEffects, [EffectGravedad], AccEffectsConGravedad),
+        buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
 
-            append(AccEffects, [EffectLimpieza, EffectGravedadPostLimpieza], FinalEffects)
-        ;
-            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
-            append(AccEffects, [EffectCombinacion], NextAccEffects),
-            resolver_pasos_juego(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
-        )
-    ;
-        EffectGravedad = effect(GridPostGravedad, [gravedad]),
-        append(AccEffects, [EffectGravedad], AccEffectsConGravedad),
-        buscar_todas_las_combinaciones(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
+        % Lógica de tu rama: Limpiar bloques retirados después de gravedad y combinaciones
+        ( NuevasCombinaciones = [] ->
+            max_in_grid(GridPostCombinaciones, Max),
+            bloques_a_retirar_acumulados(Max, BloquesRetirados),
+            eliminar_bloques_retirados(GridPostCombinaciones, BloquesRetirados, GridLimpia),
+            EffectLimpieza = effect(GridLimpia, [limpieza_bloques_retirados(BloquesRetirados)]),
 
-        ( NuevasCombinaciones = [] ->
-            max_in_grid(GridPostCombinaciones, Max),
-            range_for_max(Max, Rango),
-            bloques_retirados_en_grilla(GridPostCombinaciones, Rango, Max, BloquesRetirados),
-            eliminar_bloques_retirados(GridPostCombinaciones, BloquesRetirados, GridLimpia),
-            EffectLimpieza = effect(GridLimpia, [limpieza_bloques_retirados(BloquesRetirados)]),
+            aplicar_gravedad(GridLimpia, NumCols, GridFinal),
+            EffectGravedadPostLimpieza = effect(GridFinal, [gravedad]),
 
-            aplicar_gravedad(GridLimpia, NumCols, GridFinal),
-            EffectGravedadPostLimpieza = effect(GridFinal, [gravedad]),
-
-            append(AccEffectsConGravedad, [EffectLimpieza, EffectGravedadPostLimpieza], FinalEffects)
-        ;
-            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
-            append(AccEffectsConGravedad, [EffectCombinacion], NextAccEffects),
-            resolver_pasos_juego(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
-        )
-    ).
-
-
-
-
+            append(AccEffectsConGravedad, [EffectLimpieza, EffectGravedadPostLimpieza], FinalEffects)
+        ;
+            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
+            append(AccEffectsConGravedad, [EffectCombinacion], NextAccEffects),
+            resolver_pasos_juego(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
+        )
+    ).
 
 encontrar_grupo_conectado(Grid, NumCols, PosInicio, ValorBuscado, Grupo, VisitadosFinal) :-
     encontrar_grupo_conectado_recursivo(Grid, NumCols, [PosInicio], ValorBuscado, [PosInicio], Grupo, VisitadosFinal).
@@ -199,35 +197,36 @@ posiciones_adyacentes(Grid, Pos, NumCols, Adyacentes) :-
             P // NumCols =:= Fila
         )
     ), Adyacentes).
+
 buscar_todas_las_combinaciones(GridEntrada, NumCols, PosDisparo, GridSalida, Combinaciones) :-
-    length(GridEntrada, Len),
-    MaxIndex is Len - 1,
-    findall(
-        combination(GrupoCombinable, PosResultado, NuevoValor, LenGrupo),
-        (   between(0, MaxIndex, Pos),
-            nth0(Pos, GridEntrada, Valor),
-            number(Valor),
-            Valor \= 0,
-            encontrar_grupo_conectado(GridEntrada, NumCols, Pos, Valor, GrupoCombinable, _),
-            length(GrupoCombinable, LenGrupo),
-            LenGrupo >= 2,
-            min_list(GrupoCombinable, Pos),
-            calcular_nuevo_valor_multiplicado(Valor, LenGrupo, NuevoValor),
-            (   member(PosDisparo, GrupoCombinable) ->
-                FilaDisparo is PosDisparo // NumCols,
-                (   forall(member(P_grupo, GrupoCombinable), (P_grupo // NumCols) =:= FilaDisparo) ->
-                    PosResultado = PosDisparo
-                ;
-                    min_list(GrupoCombinable, PosResultado)
-                )
-            ;
-                min_list(GrupoCombinable, PosResultado)
-            )
-        ),
-        TodasLasCombinacionesSinDuplicados
-    ),
-    aplicar_multiples_combinaciones(GridEntrada, NumCols, TodasLasCombinacionesSinDuplicados, GridSalida, Combinaciones).
-    
+    length(GridEntrada, Len),
+    MaxIndex is Len - 1,
+    findall(
+        combination(GrupoCombinable, PosResultado, NuevoValor, LenGrupo),
+        (   between(0, MaxIndex, Pos),
+            nth0(Pos, GridEntrada, Valor),
+            number(Valor),
+            Valor \= 0,
+            encontrar_grupo_conectado(GridEntrada, NumCols, Pos, Valor, GrupoCombinable, _),
+            length(GrupoCombinable, LenGrupo),
+            LenGrupo >= 2,
+            min_list(GrupoCombinable, Pos),
+            calcular_nuevo_valor_multiplicado(Valor, LenGrupo, NuevoValor),
+            (   member(PosDisparo, GrupoCombinable) ->
+                FilaDisparo is PosDisparo // NumCols,
+                (   forall(member(P_grupo, GrupoCombinable), (P_grupo // NumCols) =:= FilaDisparo) ->
+                    PosResultado = PosDisparo
+                ;
+                    min_list(GrupoCombinable, PosResultado)
+                )
+            ;
+                min_list(GrupoCombinable, PosResultado)
+            )
+        ),
+        TodasLasCombinacionesSinDuplicados
+    ),
+    aplicar_multiples_combinaciones(GridEntrada, NumCols, TodasLasCombinacionesSinDuplicados, GridSalida, Combinaciones).
+    
 aplicar_multiples_combinaciones(GridEntrada, _NumCols, [], GridEntrada, []).
 aplicar_multiples_combinaciones(GridEntrada, NumCols, [combination(Grupo, PosRes, NuevoVal, LenGrupo)|RestoCombinaciones], GridSalida, [combination(Grupo, PosRes, NuevoVal, LenGrupo)|RestoEffects]) :-
     eliminar_bloques_combinados(GridEntrada, Grupo, GridSinCombinados),
@@ -264,33 +263,98 @@ get_first_elements([], [], []).
 get_first_elements([[H|T]|Rest], [H|Hs], [T|Ts]) :-
     get_first_elements(Rest, Hs, Ts).
 
-
 normalizar_grid([], []).
 normalizar_grid([H|T], ['-'|R]) :- var(H), !,
     normalizar_grid(T, R).
 normalizar_grid([H|T], [H|R]) :-
     normalizar_grid(T, R).
 
+% Predicados para la funcionalidad de limpieza de bloques retirados (solo en tu rama)
 memberchk_in(List, Elem) :- memberchk(Elem, List).
 
 bloques_retirados_en_grilla(Grid, _RangoActual, Max, BloquesRetirados) :-
-    bloques_a_retirar_acumulados(Max, BloquesRetiradosCandidatos),
-    include(number, Grid, NumerosEnGrilla),
-    sort(NumerosEnGrilla, BloquesEnGrillaUnicos),
-    include({BloquesEnGrillaUnicos}/[X]>>memberchk(X, BloquesEnGrillaUnicos), BloquesRetiradosCandidatos, BloquesRetirados).
-
-
+    bloques_a_retirar_acumulados(Max, BloquesRetiradosCandidatos),
+    include(number, Grid, NumerosEnGrilla),
+    sort(NumerosEnGrilla, BloquesEnGrillaUnicos),
+    include({BloquesEnGrillaUnicos}/[X]>>memberchk(X, BloquesEnGrillaUnicos), BloquesRetiradosCandidatos, BloquesRetirados).
 
 protege_max_y_rango(Rango, Max, Elem) :-
-    memberchk(Elem, Rango);
-    Elem =:= Max.
+    memberchk(Elem, Rango);
+    Elem =:= Max.
 eliminar_bloques_retirados(Grid, BloquesRetirados, GridLimpia) :-
-    maplist(reemplazar_si_retirado(BloquesRetirados), Grid, GridLimpia).
+    maplist(reemplazar_si_retirado(BloquesRetirados), Grid, GridLimpia).
 
 reemplazar_si_retirado(BloquesRetirados, Valor, NuevoValor) :-
-    ( number(Valor), memberchk(Valor, BloquesRetirados) -> NuevoValor = '-'
-    ; NuevoValor = Valor
-    ).
+    ( number(Valor), memberchk(Valor, BloquesRetirados) -> NuevoValor = '-'
+    ; NuevoValor = Valor
+    ).
 
 rango_valido(Max, Rango) :-
-    range_for_max(Max, Rango).
+    range_for_max(Max, Rango).
+
+% Predicados para la funcionalidad de hints (solo en la rama de tu compañero)
+get_hint(Block, Grid, NumCols, Columna, HintEffects, FinalGrid) :-
+    between(1, NumCols, Columna), % Itera sobre cada columna
+    (   encontrar_posicion_vacia(Grid, Columna, NumCols, PosDisparo) ->
+        poner_en_posicion(Grid, PosDisparo, Block, GridConBloqueDisparado),
+        resolver_pasos_juego_hint(GridConBloqueDisparado, NumCols, PosDisparo, [], HintEffects),
+        (   HintEffects = [] -> FinalGrid = GridConBloqueDisparado
+        ;   last(HintEffects, effect(FinalGrid, _))
+        )
+    ;   
+        HintEffects = [effect(Grid, [columna_llena])], 
+        FinalGrid = Grid
+    ).
+
+resolver_pasos_juego_hint(GridActual, NumCols, PosDisparo, AccEffects, FinalEffects) :-
+    aplicar_gravedad(GridActual, NumCols, GridPostGravedad),
+    (   GridActual =@= GridPostGravedad ->
+        buscar_todas_las_combinaciones_hint(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
+        (   NuevasCombinaciones = [] ->
+            FinalEffects = AccEffects
+        ;
+            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
+            append(AccEffects, [EffectCombinacion], NextAccEffects),
+            resolver_pasos_juego_hint(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
+        )
+    ;
+        EffectGravedad = effect(GridPostGravedad, [gravedad]),
+        append(AccEffects, [EffectGravedad], AccEffectsConGravedad),
+        buscar_todas_las_combinaciones_hint(GridPostGravedad, NumCols, PosDisparo, GridPostCombinaciones, NuevasCombinaciones),
+        (   NuevasCombinaciones = [] ->
+            FinalEffects = AccEffectsConGravedad
+        ;
+            EffectCombinacion = effect(GridPostCombinaciones, NuevasCombinaciones),
+            append(AccEffectsConGravedad, [EffectCombinacion], NextAccEffects),
+            resolver_pasos_juego_hint(GridPostCombinaciones, NumCols, PosDisparo, NextAccEffects, FinalEffects)
+        )
+    ).
+
+buscar_todas_las_combinaciones_hint(GridEntrada, NumCols, PosDisparo, GridSalida, Combinaciones) :-
+    length(GridEntrada, Len),
+    MaxIndex is Len - 1,
+    findall(
+        combination(GrupoCombinable, PosResultado, NuevoValor, LenGrupo),
+        (   between(0, MaxIndex, Pos),
+            nth0(Pos, GridEntrada, Valor),
+            number(Valor),
+            Valor \= 0,
+            encontrar_grupo_conectado(GridEntrada, NumCols, Pos, Valor, GrupoCombinable, _),
+            length(GrupoCombinable, LenGrupo),
+            LenGrupo >= 2,
+            min_list(GrupoCombinable, Pos),
+            calcular_nuevo_valor_multiplicado(Valor, LenGrupo, NuevoValor),
+            (   member(PosDisparo, GrupoCombinable) ->
+                FilaDisparo is PosDisparo // NumCols,
+                (   forall(member(P_grupo, GrupoCombinable), (P_grupo // NumCols) =:= FilaDisparo) ->
+                    PosResultado = PosDisparo
+                ;
+                    min_list(GrupoCombinable, PosResultado)
+                )
+            ;
+                min_list(GrupoCombinable, PosResultado)
+            )
+        ),
+        TodasLasCombinacionesSinDuplicados
+    ),
+    aplicar_multiples_combinaciones(GridEntrada, NumCols, TodasLasCombinacionesSinDuplicados, GridSalida, Combinaciones).
