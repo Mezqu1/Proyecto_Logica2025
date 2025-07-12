@@ -11,6 +11,4 @@ export function numberToColor(num: number) {
     }
 }
 
-export function delay(milliseconds: number) {
-    return new Promise(resolve => setTimeout(resolve, milliseconds));
-}
+export const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
