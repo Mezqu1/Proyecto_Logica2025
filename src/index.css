@@ -30,27 +30,51 @@ body {
 }
 
 .blocks {
-  position: relative;
-  display: grid;
-  row-gap: 5px;
-  column-gap: 5px;
-  border-radius: 5px;
+    /* Mantener tu CSS actual para .blocks */
+    position: relative;
+    display: grid;
+    row-gap: 5px;
+    column-gap: 5px;
+    border-radius: 5px;
+    /* Necesitas que Board.tsx pase gridTemplateColumns para que esto funcione */
+    /* Y el Board.tsx también necesita definir un gridTemplateRows si los bloques no están en los lanes */
 }
 
 .block {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 5px;
-  font-size: 25px;
-  color: white;
-  font-family: Arial, Helvetica, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    font-size: 25px;
+    color: white;
+    font-family: Arial, Helvetica, sans-serif;
+    /* AÑADIR: Dimensiones para los bloques */
+    width: 70px; /* Asumo 70px por bloque como tamaño base */
+    height: 70px;
+    /* Si tus bloques siguen siendo hijos directos de .blocks, necesitarán su posición en la grilla */
+    /* Por ejemplo: grid-area: var(--row) / var(--col); */
+    /* Esto requiere que les pases variables CSS desde React, o que los posiciones con `position: absolute;` */
+    /* Esto es lo que *no* queremos hacer si el lane debe contenerlos. */
 }
 
 .lane {
-  border-radius: 5px;
-  cursor: pointer;
-  background: rgb(28 28 30);
+    border-radius: 5px;
+    cursor: pointer;
+    background: rgb(28 28 30);
+    
+
+    /* AÑADIR O MODIFICAR: DIMENSIONES y COMPORTAMIENTO DEL LANE */
+    width: 70px; /* Define el ancho de cada carril */
+    height: 520px; /* Define la altura total de un carril (7 filas * 70px/bloque) */
+    
+    /* ESTO ES CRÍTICO PARA EL APILAMIENTO SI LOS BLOQUES SON HIJOS DEL LANE */
+    display: flex;
+    flex-direction: column-reverse; /* Apila los bloques desde abajo */
+    justify-content: flex-start; /* Asegura que los bloques se peguen al fondo */
+    align-items: center; /* Centra los bloques horizontalmente */
+    padding: 2px; /* Espacio alrededor de los bloques dentro del carril */
+    gap: 2px; /* Espacio entre los bloques */
+    box-sizing: border-box; /* Incluye padding en el tamaño total */
 }
 
 .lane:hover {
@@ -63,8 +87,9 @@ body {
   border-top: 1px solid lightgray;
   padding: 5px;
   gap: 20px; /* Asegura un espacio entre los grupos de controles */
-  justify-content: space-around; /* O space-between, o center, dependiendo de cómo quieras distribuirlos */
+  justify-content: center; /* O space-between, o center, dependiendo de cómo quieras distribuirlos */
   align-items: flex-start;
+  margin-right: 100px ;
 }
 
 .blockShoot {
@@ -144,7 +169,7 @@ body {
 }
 
 .next-block-display {
-  margin-left: 20px; /* Separación entre el bloque actual y el siguiente */
+  /*margin-left: 10px; /* Separación entre el bloque actual y el siguiente */
   width: 70px;
   height: 70px;
   display: flex;
@@ -156,23 +181,35 @@ body {
 }
 
 .hint-overlay {
-  position: absolute;
-  top: 50%; /* Centrado vertical */
-  left: 50%; /* Centrado horizontal */
-  transform: translate(-50%, -50%); /* Ajuste para centrarlo realmente */
-  background-color: rgba(0, 0, 0, 0.7); /* Fondo semi-transparente */
-  color: white;
-  padding: 5px 8px; /* Un poco menos de padding */
-  border-radius: 5px;
-  font-size: 13px; /* Tamaño de fuente un poco más pequeño */
-  font-weight: bold;
-  text-align: center;
-  pointer-events: none; /* Asegura que el clic en la columna pase a través del hint */
-  z-index: 1000; /* Asegura que esté por encima de los bloques */
-  min-width: 80%; /* Asegura que el texto no se salga del carril */
-  box-sizing: border-box; /* Incluye padding en el ancho */
-  white-space: nowrap; /* Evita que el texto se rompa en varias líneas */
-  opacity: 0.9; /* Ligeramente más opaco */
+    position: relative; /* Mantener esto es clave para posicionar el hint-overlay */
+    overflow: hidden; /* Esto es lo que causa que se oculten si no hay altura */    bottom: 0; /* Posiciona el hint en la parte INFERIOR del carril */
+    left: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.85); /* Mejor contraste */
+    color: white;
+    padding: 5px 8px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    pointer-events: none;
+    z-index: 1000;
+    box-sizing: border-box;
+    /* Para que el texto no se corte: */
+    white-space: normal; /* PERMITE que el texto se rompa en varias líneas */
+    word-wrap: break-word; /* Para asegurar que palabras muy largas se corten */
+    min-width: unset; /* Deshabilita el min-width anterior si lo quieres autoajustable */
+    /* Puedes ajustar la opacidad si lo deseas */
+    opacity: 0.95;
+    /* REMOVER: top: 50%; left: 50%; transform: translate(-50%, -50%); si quieres que esté abajo.
+       Estas propiedades lo centran en el medio, no abajo. */
+}
+
+/* AÑADIR: Estilo para el bloque de hint, si tu Board.tsx le añade la clase `hint-block` */
+.block.hint-block {
+    outline: 3px solid #ffeb3b; /* Borde amarillo brillante */
+    box-shadow: 0 0 10px rgba(255, 235, 59, 0.8);
+    transition: outline 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 }
 
 @keyframes fadeInOut {
