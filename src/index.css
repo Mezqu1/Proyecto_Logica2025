@@ -89,7 +89,7 @@ body {
   gap: 20px; /* Asegura un espacio entre los grupos de controles */
   justify-content: center; /* O space-between, o center, dependiendo de cómo quieras distribuirlos */
   align-items: flex-start;
-  margin-right: 100px ;
+  margin-right: 36px ;
 }
 
 .blockShoot {

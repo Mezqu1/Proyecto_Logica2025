@@ -104,11 +104,11 @@ range_for_max(Max, Rango) :-
 
 bloques_a_retirar_acumulados(Max, BloquesRetirados) :-
 
-    ( Max >= 16000 -> BloquesRetirados = [16]
+    ( Max >= 16000 -> BloquesRetirados = [16,8,4,2]
 
-    ; Max >= 4096  -> BloquesRetirados = [8]
+    ; Max >= 4096  -> BloquesRetirados = [8,4,2]
 
-    ; Max >= 2048  -> BloquesRetirados = [4]
+    ; Max >= 2048  -> BloquesRetirados = [4.2]
 
     ; Max >= 1024  -> BloquesRetirados = [2]
 

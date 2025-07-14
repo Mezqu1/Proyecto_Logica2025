@@ -304,177 +304,86 @@ function Game() {
 
 
 
-  async function handleLaneClick(lane: number) {
-
-    if (waiting || !grid || shootBlock === null || numOfColumns === null) {
-
-        return;
-
-    }
-
-
-
-    // Reiniciar todos los mensajes al inicio de un nuevo disparo
-
-    setRemovedMessage(null);
-
-    setMaxBlockMessage(null);
-
-    setNewBlockRangeMessage(null);
-
-    setComboMessage(null);
-
-    setNotifiedRemovedBlocks([]);
-
-
-
-    setShowHints(false);
-
-    setHintsData(null);
-
-
-
-    const prologLane = lane;
-
-    const gridS = JSON.stringify(grid).replace(/"/g, '');
-
-   
-
-    const queryS = `shoot(${shootBlock}, ${prologLane}, ${gridS}, ${numOfColumns}, Effects), last(Effects, effect(RGrid,_))`;
-
-    setWaiting(true);
-
-
-
-    const response = await pengine.query(queryS);
-
-
-
-    if (response) {
-
-        const finalGridFromProlog = response['RGrid'];
-
-        const allEffects = response['Effects'];
-
-
-
-        // Calcula y actualiza los nuevos bloques futuros INMEDIATAMENTE
-
-        // Esto ya lo tenemos y funciona bien para la inmediatez
-
-        let newFutureBlocks = futureBlocks.slice(1);
-
-        let newRandomBlock = await fetchRandomBlocks(finalGridFromProlog, 1);
-
-        newFutureBlocks.push(newRandomBlock[0]);
-
-
-
-        setFutureBlocks(newFutureBlocks);
-
-        setShootBlock(newFutureBlocks[0]);
-
-        if (newFutureBlocks.length > 1) {
-
-            setNextShootBlock(newFutureBlocks[1]);
-
-        } else {
-
-            setNextShootBlock(null);
-
-        }
-
-
-
-        // Inicia la animación de los efectos y ESPERA a que termine
-
-        const finalBloquesRetirados = await animateEffectsRecursive(allEffects, grid);
-
-
-
-        // Lógica para mostrar mensaje de bloques retirados UNA VEZ POR DISPARO COMPLETO
-
-        if (finalBloquesRetirados && finalBloquesRetirados.length > 0) {
-
-            const bloquesNuevosParaAvisar = finalBloquesRetirados.filter(
-
-                blockValue => !notifiedRemovedBlocks.includes(blockValue)
-
-            );
-
-
-
-            if (bloquesNuevosParaAvisar.length > 0) {
-
-                const textoBloques = bloquesNuevosParaAvisar.join(', ');
-
-                showTemporaryMessage(setRemovedMessage, `Se eliminaron los bloques retirados: ${textoBloques}`, REMOVED_DISPLAY_DURATION);
-
-                setNotifiedRemovedBlocks(prev => [...prev, ...bloquesNuevosParaAvisar]);
-
-            }
-
-
-
-            // --- ¡NUEVA LÓGICA AQUÍ! ---
-
-            // Chequear si el bloque a disparar (shootBlock) está en la lista de bloques que fueron eliminados
-
-            if (shootBlock !== null && finalBloquesRetirados.includes(shootBlock)) {
-
-                // Si el bloque actual a disparar fue eliminado, generamos uno nuevo
-
-                console.log(`El bloque a disparar (${shootBlock}) fue eliminado. Generando uno nuevo.`);
-
-                const updatedFutureBlocks = [...newFutureBlocks]; // Usa una copia para no mutar el estado directamente
-
-               
-
-                // Generamos un nuevo bloque random para reemplazar el actual shootBlock
-
-                const replacementBlock = await fetchRandomBlocks(finalGridFromProlog, 1);
-
-               
-
-                // Reemplaza el primer elemento de la cola (que es el shootBlock actual)
-
-                updatedFutureBlocks[0] = replacementBlock[0];
-
-
-
-                setFutureBlocks(updatedFutureBlocks);
-
-                setShootBlock(updatedFutureBlocks[0]);
-
-                if (updatedFutureBlocks.length > 1) {
-
-                    setNextShootBlock(updatedFutureBlocks[1]);
-
-                } else {
-
-                    setNextShootBlock(null);
-
-                }
-
-            }
-
-            // --- FIN DE NUEVA LÓGICA ---
-
-        }
-
-
-
-        setWaiting(false);
-
-
-
-    } else {
-
-        setWaiting(false);
-
-    }
-
-}
+     async function handleLaneClick(lane: number) {
+        if (waiting || !grid || shootBlock === null || numOfColumns === null) {
+            return;
+        }
+
+        // Reiniciar todos los mensajes al inicio de un nuevo disparo
+        setRemovedMessage(null);
+        setMaxBlockMessage(null);
+        setNewBlockRangeMessage(null);
+        setComboMessage(null);
+        setNotifiedRemovedBlocks([]);
+        setShowHints(false);
+        setHintsData(null);
+        const prologLane = lane;
+        const gridS = JSON.stringify(grid).replace(/"/g, '');
+        
+        const queryS = `shoot(${shootBlock}, ${prologLane}, ${gridS}, ${numOfColumns}, Effects), last(Effects, effect(RGrid,_))`;
+        setWaiting(true);
+
+        const response = await pengine.query(queryS);
+
+        if (response) {
+            const finalGridFromProlog = response['RGrid'];
+            const allEffects = response['Effects'];
+
+            // Calcula y actualiza los nuevos bloques futuros INMEDIATAMENTE
+            // Esto ya lo tenemos y funciona bien para la inmediatez
+            let newFutureBlocks = futureBlocks.slice(1); 
+            let newRandomBlock = await fetchRandomBlocks(finalGridFromProlog, 1);
+            newFutureBlocks.push(newRandomBlock[0]);
+
+            setFutureBlocks(newFutureBlocks);
+            setShootBlock(newFutureBlocks[0]);
+            if (newFutureBlocks.length > 1) {
+                setNextShootBlock(newFutureBlocks[1]);
+            } else {
+                setNextShootBlock(null);
+            }
+
+            // Inicia la animación de los efectos y ESPERA a que termine
+            const finalBloquesRetirados = await animateEffectsRecursive(allEffects, grid);
+
+            // Lógica para mostrar mensaje de bloques retirados UNA VEZ POR DISPARO COMPLETO
+            if (finalBloquesRetirados && finalBloquesRetirados.length > 0) {
+                const bloquesNuevosParaAvisar = finalBloquesRetirados.filter(
+                    blockValue => !notifiedRemovedBlocks.includes(blockValue)
+                );
+
+                if (bloquesNuevosParaAvisar.length > 0) {
+                    const textoBloques = bloquesNuevosParaAvisar.join(', ');
+                    showTemporaryMessage(setRemovedMessage, `Se eliminaron los bloques retirados: ${textoBloques}`, REMOVED_DISPLAY_DURATION);
+                    setNotifiedRemovedBlocks(prev => [...prev, ...bloquesNuevosParaAvisar]);
+                }
+
+                // Chequear si el bloque a disparar (shootBlock) está en la lista de bloques que fueron eliminados
+                if (shootBlock !== null && finalBloquesRetirados.includes(shootBlock)) {
+                    const updatedFutureBlocks = [...newFutureBlocks]; // Usa una copia para no mutar el estado directamente
+                    
+                    // Generamos un nuevo bloque random para reemplazar el actual shootBlock
+                    const replacementBlock = await fetchRandomBlocks(finalGridFromProlog, 1);
+                    
+                    // Reemplaza el primer elemento de la cola (que es el shootBlock actual)
+                    updatedFutureBlocks[0] = replacementBlock[0];
+
+                    setFutureBlocks(updatedFutureBlocks);
+                    setShootBlock(updatedFutureBlocks[0]);
+                    if (updatedFutureBlocks.length > 1) {
+                        setNextShootBlock(updatedFutureBlocks[1]);
+                    } else {
+                        setNextShootBlock(null);
+                    }
+                }
+            }
+
+            setWaiting(false); 
+
+        } else {
+            setWaiting(false);
+        }
+    }
 
 
 
@@ -668,224 +577,115 @@ function Game() {
 
      */
 
-    async function animateEffectsRecursive(effects: EffectTerm[], currentInitialGrid: Grid): Promise<number[]> {
-
-    // Bloques que han sido retirados en CUALQUIERA de los pasos de esta secuencia de efectos
-
-    let allBloquesRetiradosInSequence: number[] = [];
-
-
-
-    // Función interna para procesar recursivamente los efectos
-
-    const processEffects = async (remainingEffects: EffectTerm[], currentGridForEffect: Grid): Promise<void> => {
-
-        if (remainingEffects.length === 0) {
-
-            setComboMessage(null); // Asegura que el mensaje de combo se limpie al final
-
-            return;
-
-        }
-
-
-
-        const currentEffect = remainingEffects[0];
-
-        const [effectGridForAnimation, effectInfo] = currentEffect.args;
-
-
-
-        let scoreUpdateForThisStep = 0;
-
-        let comboCountForThisStep = 0;
-
-        let anyCombinationOccurred = false;
-
-        let columnaLlenaOccurred = false;
-
-
-
-        for (const item of effectInfo) {
-
-            if (item.functor === 'combination') {
-
-                const nuevoValorCombinacion = (item as CombinationTerm).args[2];
-
-                scoreUpdateForThisStep += nuevoValorCombinacion;
-
-                comboCountForThisStep++;
-
-                anyCombinationOccurred = true;
-
-            } else if (item.functor === 'limpieza_bloques_retirados') {
-
-                const bloquesRetiradosThisStep = item.args[0] as number[];
-
-                // Acumula todos los bloques retirados que Prolog informó en esta secuencia
-
-                allBloquesRetiradosInSequence = Array.from(new Set([...allBloquesRetiradosInSequence, ...bloquesRetiradosThisStep]));
-
-
-
-                // **IMPORTANTE**: No mostramos el mensaje aquí directamente. Se hará al final.
-
-            } else if (item.functor === 'columna_llena') {
-
-                columnaLlenaOccurred = true;
-
-            }
-
-        }
-
-
-
-        setGrid(effectGridForAnimation);
-
-        if (scoreUpdateForThisStep > 0) {
-
-            setScore(prevScore => prevScore + scoreUpdateForThisStep);
-
-        }
-
-
-
-        // Los mensajes de Columna Llena, Max Block y New Range siguen yendo aquí
-
-        if (columnaLlenaOccurred) {
-
-            showTemporaryMessage(setRemovedMessage, `¡Columna llena! Fin del juego.`, REMOVED_DISPLAY_DURATION);
-
-        }
-
-
-
-        const currentGridNumbersForMax = currentGridForEffect.filter(x => typeof x === "number") as number[];
-
-        const previousMax = currentGridNumbersForMax.length > 0 ? Math.max(...currentGridNumbersForMax) : 0;
-
-
-
-        const effectGridNumbers = effectGridForAnimation.filter(x => typeof x === "number") as number[];
-
-        const currentMax = effectGridNumbers.length > 0 ? Math.max(...effectGridNumbers) : 0;
-
-
-
-        if (currentMax > previousMax) {
-
-            showTemporaryMessage(
-
-                setMaxBlockMessage,
-
-                `¡Nuevo máximo alcanzado: ${currentMax}!`,
-
-                MAX_BLOCK_DISPLAY_DURATION
-
-            );
-
-
-
-            const prevRange = await getRangeForMax(previousMax);
-
-            const newRange = await getRangeForMax(currentMax);
-
-            const nuevosBloques = newRange.filter(b => !prevRange.includes(b));
-
-
-
-            if (nuevosBloques.length > 0) {
-
-                showTemporaryMessage(
-
-                    setNewBlockRangeMessage,
-
-                    `¡Nuevo rango desbloqueado! Ahora puedes disparar: ${newRange.join(', ')}`,
-
-                    NEW_BLOCK_RANGE_DISPLAY_DURATION
-
-                );
-
-            }
-
-        }
-
-
-
-        // LÓGICA DE COMBO
-
-        if (anyCombinationOccurred) {
-
-            if (comboCountForThisStep > 1) {
-
-                showTemporaryMessage(setComboMessage, `COMBO x${comboCountForThisStep}`, COMBO_DISPLAY_DURATION);
-
-            } else if (comboCountForThisStep === 1) {
-
-                const firstCombination = effectInfo.find(item => item.functor === 'combination') as CombinationTerm;
-
-                if (firstCombination && firstCombination.args[3] >= 3) {
-
-                    showTemporaryMessage(setComboMessage, `COMBO x${firstCombination.args[3] - 1}`, COMBO_DISPLAY_DURATION);
-
-                } else {
-
-                    setComboMessage(null);
-
-                }
-
-            } else {
-
-                setComboMessage(null);
-
-            }
-
-        } else {
-
-            setComboMessage(null);
-
-        }
-
-
-
-        await delay(DEFAULT_EFFECT_DELAY);
-
-
-
-        const restEffects = remainingEffects.slice(1);
-
-        await processEffects(restEffects, effectGridForAnimation);
-
-    };
-
-
-
-    await processEffects(effects, currentInitialGrid); // Inicia la recursión
-
-    return allBloquesRetiradosInSequence; // Retorna los bloques retirados acumulados
-
-}
-
-
-
-
-
-
+    async function animateEffectsRecursive(effects: EffectTerm[], currentInitialGrid: Grid): Promise<number[]> {
+        // Bloques que han sido retirados en CUALQUIERA de los pasos de esta secuencia de efectos
+        let allBloquesRetiradosInSequence: number[] = [];
+
+        // Función interna para procesar recursivamente los efectos
+        const processEffects = async (remainingEffects: EffectTerm[], currentGridForEffect: Grid): Promise<void> => {
+            if (remainingEffects.length === 0) {
+                setComboMessage(null); // Asegura que el mensaje de combo se limpie al final
+                return;
+            }
+
+            const currentEffect = remainingEffects[0];
+            const [effectGridForAnimation, effectInfo] = currentEffect.args;
+
+            let scoreUpdateForThisStep = 0;
+            let comboCountForThisStep = 0;
+            let anyCombinationOccurred = false;
+            let columnaLlenaOccurred = false;
+
+            for (const item of effectInfo) {
+                if (item.functor === 'combination') {
+                    const nuevoValorCombinacion = (item as CombinationTerm).args[2];
+                    scoreUpdateForThisStep += nuevoValorCombinacion;
+                    comboCountForThisStep++;
+                    anyCombinationOccurred = true;
+                } else if (item.functor === 'limpieza_bloques_retirados') {
+                    const bloquesRetiradosThisStep = item.args[0] as number[];
+                    // Acumula todos los bloques retirados que Prolog informó en esta secuencia
+                    allBloquesRetiradosInSequence = Array.from(new Set([...allBloquesRetiradosInSequence, ...bloquesRetiradosThisStep]));
+
+                    // **IMPORTANTE**: No mostramos el mensaje aquí directamente. Se hará al final.
+                } else if (item.functor === 'columna_llena') {
+                    columnaLlenaOccurred = true;
+                }
+            }
+
+            setGrid(effectGridForAnimation);
+            if (scoreUpdateForThisStep > 0) {
+                setScore(prevScore => prevScore + scoreUpdateForThisStep);
+            }
+
+            // Los mensajes de Columna Llena, Max Block y New Range siguen yendo aquí
+            if (columnaLlenaOccurred) {
+                showTemporaryMessage(setRemovedMessage, `¡Columna llena! Fin del juego.`, REMOVED_DISPLAY_DURATION);
+            }
+
+            const currentGridNumbersForMax = currentGridForEffect.filter(x => typeof x === "number") as number[];
+            const previousMax = currentGridNumbersForMax.length > 0 ? Math.max(...currentGridNumbersForMax) : 0;
+
+            const effectGridNumbers = effectGridForAnimation.filter(x => typeof x === "number") as number[];
+            const currentMax = effectGridNumbers.length > 0 ? Math.max(...effectGridNumbers) : 0;
+
+            if (currentMax > previousMax) {
+                showTemporaryMessage(
+                    setMaxBlockMessage,
+                    `¡Nuevo máximo alcanzado: ${currentMax}!`,
+                    MAX_BLOCK_DISPLAY_DURATION
+                );
+
+                const prevRange = await getRangeForMax(previousMax);
+                const newRange = await getRangeForMax(currentMax);
+                const nuevosBloques = newRange.filter(b => !prevRange.includes(b));
+
+                if (nuevosBloques.length > 0) {
+                    showTemporaryMessage(
+                        setNewBlockRangeMessage,
+                        `¡Nuevo rango desbloqueado! Ahora puedes disparar: ${newRange.join(', ')}`,
+                        NEW_BLOCK_RANGE_DISPLAY_DURATION
+                    );
+                }
+            }
+
+            // LÓGICA DE COMBO
+            if (anyCombinationOccurred) {
+                if (comboCountForThisStep > 1) {
+                    showTemporaryMessage(setComboMessage, `COMBO x${comboCountForThisStep}`, COMBO_DISPLAY_DURATION);
+                } else if (comboCountForThisStep === 1) {
+                    const firstCombination = effectInfo.find(item => item.functor === 'combination') as CombinationTerm;
+                    if (firstCombination && firstCombination.args[3] >= 3) {
+                        showTemporaryMessage(setComboMessage, `COMBO x${firstCombination.args[3] - 1}`, COMBO_DISPLAY_DURATION);
+                    } else {
+                        setComboMessage(null);
+                    }
+                } else {
+                    setComboMessage(null);
+                }
+            } else {
+                setComboMessage(null);
+            }
+
+            await delay(DEFAULT_EFFECT_DELAY);
+
+            const restEffects = remainingEffects.slice(1);
+            await processEffects(restEffects, effectGridForAnimation);
+        };
+
+        await processEffects(effects, currentInitialGrid); // Inicia la recursión
+        return allBloquesRetiradosInSequence; // Retorna los bloques retirados acumulados
+    }
 
     if (grid === null) {
-
         return null;
-
     }
-
-
 
 return (
         <div className="game">
             <div className="header">
                 <div className="score">{score}</div>
             </div>
-
             {/* Mensajes de tu rama */}
             {comboMessage && (
                 <div className="combo-message">
@@ -904,7 +704,6 @@ return (
                 <div className="new-block-range-message">{newBlockRangeMessage}</div>
             )}
             {/* Fin Mensajes de tu rama */}
-
             <Board
                 grid={grid}
                 numOfColumns={numOfColumns!}
@@ -914,7 +713,6 @@ return (
                 hintsData={hintsData}
                 // ------------------------------------------------
             />
-
             <div className='footer'>
                 {/* Botón del Booster 'Bloque Siguiente' y su información (de tu compañero) */}
                 <div className="booster-controls">
@@ -948,7 +746,7 @@ return (
                         className="booster-button"
                         disabled={waiting || !pengine || !grid || shootBlock === null || numOfColumns === null}
                     >
-                        Booster Hint
+                        Booster Hint Jugada
                     </button>
                     {showHints && <div className="booster-info">Pistas activas</div>}
                 </div>
