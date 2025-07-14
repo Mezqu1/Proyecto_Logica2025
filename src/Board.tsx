@@ -44,7 +44,7 @@
                     const firstCombination = effectInfos.find(item => item.functor === 'combination') as CombinationTerm;
                     if (firstCombination) {
                         const tamanioGrupo = firstCombination.args[3];
-                        summaryText = `COMBO x${tamanioGrupo -1} (+${totalValue} pts)`;
+                        summaryText = `COMBO x${tamanioGrupo} (+${totalValue} pts)`;
                     }
                 }
             return summaryText;
